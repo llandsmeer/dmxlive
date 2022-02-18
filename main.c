@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "colors.h"
 #include "libe131/e131.h"
 #include "duktape/duktape.h"
 
@@ -57,6 +58,90 @@ uint64_t mtime_us(const char * path) {
     struct stat attr;
     stat(path, &attr);
     return attr.st_mtim.tv_sec * 1000000 + attr.st_mtim.tv_nsec / 1000;
+}
+
+struct rgb {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+};
+
+int hex(char s) {
+    if (s >= '0' && s <= '9') {
+        return s - '0';
+    }
+    if (s >= 'a' && s <= 'f') {
+        return s - 'a';
+    }
+    if (s >= 'A' && s <= 'F') {
+        return s - 'A';
+    }
+    return 0;
+}
+
+struct rgb get_rgb_color(duk_context * ctx) {
+    struct rgb rgb;
+    duk_int_t t = duk_get_type(ctx, -1);
+    switch(t) {
+        case DUK_TYPE_BOOLEAN: {
+            bool raw = duk_get_boolean(ctx, -1);
+            rgb.r = rgb.g = rgb.b = raw ? 255 : 0;
+            return rgb;
+        }
+        case DUK_TYPE_NUMBER: {
+            // single number = grayscale 0-255
+            float raw = duk_get_number(ctx, -1);
+            uint8_t val;
+            if (raw <= 0) {
+                val = 0;
+            } else if (raw >= 255) {
+                val = 255;
+            } else {
+                val = round(raw);
+            }
+            rgb.r = rgb.g = rgb.b = val;
+            return rgb;
+        }
+        case DUK_TYPE_OBJECT: {
+            // TODO
+            rgb.r = rgb.g = rgb.b = 0;
+            return rgb;
+        }
+        case DUK_TYPE_STRING: {
+            const char * raw = duk_get_string(ctx, -1);
+            int len = strlen(raw);
+            if (len == 0) {
+                rgb.r = rgb.g = rgb.b = 0;
+            } else if (raw[0] == '#' && len == 1 + 3) {
+                rgb.r = 16 * hex(raw[1]);
+                rgb.g = 16 * hex(raw[2]);
+                rgb.b = 16 * hex(raw[3]);
+            } else if (raw[0] == '#' && len == 1 + 6) {
+                rgb.r = 16 * hex(raw[1]) + hex(raw[2]);
+                rgb.g = 16 * hex(raw[3]) + hex(raw[4]);
+                rgb.b = 16 * hex(raw[5]) + hex(raw[6]);
+            } else {
+              rgb = {0 ,0, 0};
+              for (size_t i = 0; i < sizeof(namedcolors) / sizeof(struct namedcolor); i++) {
+                  if (strcmp(namedcolors[i].name, raw) == 0) {
+                      rgb = {namedcolors[i].r, namedcolors[i].g, namedcolors[i].b};
+                      break;
+                  }
+              }
+            }
+            return rgb;
+        }
+        default:
+        case DUK_TYPE_BUFFER:
+        case DUK_TYPE_POINTER:
+        case DUK_TYPE_LIGHTFUNC:
+        case DUK_TYPE_NONE:
+        case DUK_TYPE_NULL:
+        case DUK_TYPE_UNDEFINED: {
+            rgb.r = rgb.g = rgb.b = 0;
+            return rgb;
+        }
+    }
 }
 
 int main() {
@@ -121,13 +206,13 @@ int main() {
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts_curr);
         float elapsed = (ts_curr.tv_sec -ts_begin.tv_sec) +
                         (ts_curr.tv_nsec-ts_begin.tv_nsec) * 1e-9;
-        for (size_t pos = 0; pos < nleds; pos++) {
+        for (int pos = 0; pos < nleds; pos++) {
             duk_get_global_string(ctx, "color");
             duk_push_int(ctx, pos);
             duk_push_number(ctx, elapsed);
-            uint8_t level = 0;
+            struct rgb rgb;
             if (duk_pcall(ctx, 2) == DUK_EXEC_SUCCESS) {
-                level = (int) duk_get_int(ctx, -1);
+                rgb = get_rgb_color(ctx);
                 duk_pop(ctx);
             } else {
                 const char * error = duk_safe_to_string(ctx, -1);
@@ -138,9 +223,9 @@ int main() {
                 duk_pop(ctx);
                 continue;
             }
-            packet.dmp.prop_val[1 + 3*pos + 0] = level; // R
-            packet.dmp.prop_val[1 + 3*pos + 1] = level; // G
-            packet.dmp.prop_val[1 + 3*pos + 2] = level; // B
+            packet.dmp.prop_val[1 + 3*pos + 0] = rgb.r;
+            packet.dmp.prop_val[1 + 3*pos + 1] = rgb.g;
+            packet.dmp.prop_val[1 + 3*pos + 2] = rgb.b;
         }
         if (e131_send(sockfd, &packet, &dest) < 0) {
             err(EXIT_FAILURE, "e131_send");

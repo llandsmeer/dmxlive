@@ -1,5 +1,5 @@
 build/dmxlive: main.c build/duktape.o build/e131.o
-	g++ -g main.c build/e131.o build/duktape.o -o dmxlive -lm -std=c++11
+	g++ -Wall -Wextra -g main.c build/e131.o build/duktape.o -o dmxlive -lm -std=c++11
 
 build/duktape.o: duktape/duktape.c
 	mkdir -p build
