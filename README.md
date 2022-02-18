@@ -51,6 +51,14 @@ function color(i, t) {
 }
 ```
 
+Another way to draw a rainbow (10 repeats)
+
+```javascript
+function color(i, t) {
+    return hsv(i * 20 * PI / nleds + 5 * t)
+}
+```
+
 # would not have been possible without:
 
  - libe131

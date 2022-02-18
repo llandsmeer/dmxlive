@@ -89,6 +89,49 @@ uint8_t clamp_rgb_value(float raw) {
     }
 }
 
+struct rgb hsv2rgb(float hsv[3]) {
+    // from https://stackoverflow.com/questions/3018313
+    double hh, ff;
+    uint8_t p, q, t, v;
+    long i;
+    struct rgb out;
+    if(hsv[1] <= 0.0) { out.r = hsv[2]; out.g = hsv[2]; out.b = hsv[2]; return out; }
+    hh = fmod(hsv[0] * 180.0 / M_PI + 360, 360) / 60;
+    i = (long)hh;
+    ff = hh - i;
+    p = clamp_rgb_value(255 * hsv[2] * (1.0 - hsv[1]));
+    q = clamp_rgb_value(255 * hsv[2] * (1.0 - (hsv[1] * ff)));
+    t = clamp_rgb_value(255 * hsv[2] * (1.0 - (hsv[1] * (1.0 - ff))));
+    v = clamp_rgb_value(255 * hsv[2]);
+    switch(i) {
+        case 0: out = { v, t, p }; break;
+        case 1: out = { q, v, p }; break;
+        case 2: out = { p, v, t }; break;
+        case 3: out = { p, q, v }; break;
+        case 4: out = { t, p, v }; break;
+        case 5:
+        default: out = { v, p, q }; break;
+    }
+    return out;
+}
+
+static duk_ret_t js_hsv2rgb(duk_context * ctx) {
+  int nargs = duk_get_top(ctx);
+  float hsv[3] = { 0, 1.0, 1.0 };
+  if (nargs >= 1) hsv[0] = duk_get_number_default(ctx, 0, hsv[0]);
+  if (nargs >= 2) hsv[1] = duk_get_number_default(ctx, 1, hsv[1]);
+  if (nargs >= 3) hsv[2] = duk_get_number_default(ctx, 2, hsv[2]);
+  struct rgb rgb = hsv2rgb(hsv);
+  duk_idx_t arr = duk_push_array(ctx);
+  duk_push_int(ctx, rgb.r);
+  duk_put_prop_index(ctx, arr, 0);
+  duk_push_int(ctx, rgb.g);
+  duk_put_prop_index(ctx, arr, 1);
+  duk_push_int(ctx, rgb.b);
+  duk_put_prop_index(ctx, arr, 2);
+  return 1;  /* one return value */
+}
+
 struct rgb get_rgb_color(duk_context * ctx) {
     struct rgb rgb;
     duk_int_t t = duk_get_type(ctx, -1);
@@ -159,6 +202,15 @@ struct rgb get_rgb_color(duk_context * ctx) {
     }
 }
 
+void setup_environment(duk_context * ctx) {
+    duk_push_string(ctx, "Object.getOwnPropertyNames(Math).forEach((function(name) { this[name] = Math[name] }).bind(this))");
+    if (duk_peval(ctx) != DUK_EXEC_SUCCESS) {
+        printf("copy math error: %s\n", duk_safe_to_string(ctx, -1));
+    }
+    duk_push_c_function(ctx, js_hsv2rgb, DUK_VARARGS);
+    duk_put_global_string(ctx, "hsv");
+}
+
 int main() {
     const char * path = "scene.js";
     uint64_t last_mtime = mtime_us(path);
@@ -168,10 +220,7 @@ int main() {
         err(EXIT_FAILURE, "duk_create_heap_default");
     }
 
-    duk_push_string(ctx, "Object.getOwnPropertyNames(Math).forEach((function(name) { this[name] = Math[name] }).bind(this))");
-    if (duk_peval(ctx) != DUK_EXEC_SUCCESS) {
-        printf("copy math error: %s\n", duk_safe_to_string(ctx, -1));
-    }
+    setup_environment(ctx);
 
     push_string_file_raw(ctx, path);
     duk_push_string(ctx, path);
