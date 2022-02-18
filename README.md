@@ -59,6 +59,28 @@ function color(i, t) {
 }
 ```
 
+Grayscale Kuramoto model with time-varying coupling coefficient
+
+```javascript
+dt = 0.1
+phase = []
+frequency = []
+for (i = 0; i < nleds; i++) {
+    phase[i] = 2 * PI * random()
+    frequency[i] = random()
+}
+```
+
+function color(i, t) {
+    K = 0.5 + 0.5 * sin(2*t)
+    phase[i] += dt * (
+        frequency[i] +
+        K * sin(phase[(i+1)%nleds] - phase[i]) +
+        K * sin(phase[(i-1+nleds)%nleds] - phase[i])
+        )
+    return 128 + 128 * sin(phase[i])
+}
+
 # would not have been possible without:
 
  - libe131
