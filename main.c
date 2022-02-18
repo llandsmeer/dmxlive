@@ -79,6 +79,16 @@ int hex(char s) {
     return 0;
 }
 
+uint8_t clamp_rgb_value(float raw) {
+    if (raw <= 0) {
+        return 0;
+    } else if (raw >= 255) {
+        return 255;
+    } else {
+        return round(raw);
+    }
+}
+
 struct rgb get_rgb_color(duk_context * ctx) {
     struct rgb rgb;
     duk_int_t t = duk_get_type(ctx, -1);
@@ -91,19 +101,24 @@ struct rgb get_rgb_color(duk_context * ctx) {
         case DUK_TYPE_NUMBER: {
             // single number = grayscale 0-255
             float raw = duk_get_number(ctx, -1);
-            uint8_t val;
-            if (raw <= 0) {
-                val = 0;
-            } else if (raw >= 255) {
-                val = 255;
-            } else {
-                val = round(raw);
-            }
-            rgb.r = rgb.g = rgb.b = val;
+            rgb.r = rgb.g = rgb.b = clamp_rgb_value(raw);
             return rgb;
         }
         case DUK_TYPE_OBJECT: {
-            // TODO
+            // array: [r, g, b]
+            duk_get_prop_index(ctx, -1, 0);
+            duk_get_prop_index(ctx, -2, 1);
+            duk_get_prop_index(ctx, -3, 2);
+            if (duk_check_type(ctx, -3, DUK_TYPE_NUMBER) &&
+                duk_check_type(ctx, -2, DUK_TYPE_NUMBER) &&
+                duk_check_type(ctx, -1, DUK_TYPE_NUMBER)) {
+                rgb.r = clamp_rgb_value(duk_get_number(ctx, -3));
+                rgb.g = clamp_rgb_value(duk_get_number(ctx, -2));
+                rgb.b = clamp_rgb_value(duk_get_number(ctx, -1));
+                duk_pop_3(ctx);
+                return rgb;
+            }
+            duk_pop_3(ctx);
             rgb.r = rgb.g = rgb.b = 0;
             return rgb;
         }

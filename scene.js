@@ -10,11 +10,9 @@ function s(i, t, f) {
 }
 
 function color(i, t) {
-    if (i > 100)
-        return 'deepskyblue'
-    if (i > 50 + 10*sin(2*t))
-        return 'aquamarine'
-    else:
-        return 'sandybrown'
+    r = sin(0.5*i + 10*t)
+    g = sin(0.5*i + 10*t + 2*PI/3)
+    b = sin(0.5*i + 10*t + 4*PI/3)
+    return [128+128*r, 128+128*g, 128+128*b]
 }
 
