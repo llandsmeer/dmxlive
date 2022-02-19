@@ -22,7 +22,6 @@ const char * push_string_file_raw(duk_context *ctx, const char *path) {
     FILE *f = NULL;
     char *buf;
     long sz;  /* ANSI C typing */
-
     if (!path) {
         goto fail;
     }
@@ -47,14 +46,11 @@ const char * push_string_file_raw(duk_context *ctx, const char *path) {
     }
     (void) fclose(f);  /* ignore fclose() error */
     return duk_buffer_to_string(ctx, -1);
-
     fail:
     if (f) {
         (void) fclose(f);  /* ignore fclose() error */
     }
-
-    (void) duk_type_error(ctx, "read file error");
-    err(EXIT_FAILURE, "duk_string_file_raw");
+    perror("duk_string_file_raw"); // don't exit, might be harmless
     return NULL;
 }
 
@@ -289,7 +285,7 @@ int main() {
         // retrieve microphone data
 #ifdef ENABLE_AUDIO
         alcGetIntegerv(device, ALC_CAPTURE_SAMPLES, (ALCsizei)sizeof(ALint), &audio_nsamples);
-        if (audio_nsamples > sizeof(audio_buffer) / 2) {
+        if ((size_t)audio_nsamples > sizeof(audio_buffer) / 2) {
             audio_nsamples = sizeof(audio_buffer) / 2;
         }
 
