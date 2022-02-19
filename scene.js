@@ -1,21 +1,14 @@
 ip = "192.168.1.92"
 nleds = 150
 
-dt = 0.1
-phase = []
-frequency = []
-for (i = 0; i < nleds; i++) {
-    phase[i] = 2 * PI * random()
-    frequency[i] = random()
-}
-
+amax = 0
+hist = []
 function color(i, t) {
-    K = 0.5 + 0.5 * sin(2*t)
-    phase[i] += dt * (
-        frequency[i] +
-        K * sin(phase[(i+1)%nleds] - phase[i]) +
-        K * sin(phase[(i-1+nleds)%nleds] - phase[i])
-        )
-    return 128 + 128 * sin(phase[i])
+    amax = min(max(amp, 0.99999*amax), 0.05)
+    if (i == nleds-1)
+        hist[i] = hsv(t, 1, amp / amax)
+    else
+        hist[i] = hist[i+1]
+    return hist[nleds - i - 1]
 }
 

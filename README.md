@@ -1,4 +1,4 @@
-# dmxlive
+## dmxlive
 
 Minimal livecoding environment for WLED over DMX
 
@@ -25,7 +25,23 @@ function color(i, t) {
 
 The `color` function can return, any javascript value, and the program tries to make it into a color.
 
-# some examples
+## microphone input
+
+Optionally enabled with the `ENABLE_AUDIO` preprocessor flag, which is set by default.
+Depends on the OpenAL library.
+
+```
+sudo apt install libopenal-dev
+```
+
+If it is not available, you can use `make build/dmxlive.noaudio`
+to build without microphone input support.
+
+For the moment, RMS microphone input is available as the global variable `amp`
+in `scene.js`. True RMS is a not a good measure of loudness, but I haven't gotten around
+to implementing something better.
+
+## some examples
 
 A one-dimensional seashore
 
@@ -69,7 +85,6 @@ for (i = 0; i < nleds; i++) {
     phase[i] = 2 * PI * random()
     frequency[i] = random()
 }
-```
 
 function color(i, t) {
     K = 0.5 + 0.5 * sin(2*t)
@@ -80,8 +95,41 @@ function color(i, t) {
         )
     return 128 + 128 * sin(phase[i])
 }
+```
 
-# would not have been possible without:
+Volume meter
+
+```javascript
+v = 0
+function color(i, t) {
+    if (i == 0) {
+        v = max(amp, v * 0.99)
+    }
+    if (i > nleds*log(1e4*v)) return
+    if (i > nleds * 0.8)
+        return 'red'
+    if (i > nleds * 0.5)
+        return 'orange'
+    return 'green'
+}
+```
+
+Visualize sounds over time in space
+
+```javascript
+amax = 0
+hist = []
+function color(i, t) {
+    amax = min(max(amp, 0.99999*amax), 0.05)
+    if (i == nleds-1)
+        hist[i] = hsv(t, 1, amp / amax)
+    else
+        hist[i] = hist[i+1]
+    return hist[nleds - i - 1]
+}
+```
+
+## would not have been possible without:
 
  - libe131
  - duktape

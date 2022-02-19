@@ -12,6 +12,11 @@
 #include "libe131/e131.h"
 #include "duktape/duktape.h"
 
+#ifdef ENABLE_AUDIO
+#include <AL/al.h>
+#include <AL/alc.h>
+#endif
+
 const char * push_string_file_raw(duk_context *ctx, const char *path) {
     // from duktape/extras/duk-v1-compat/duk_v1_compat.c
     FILE *f = NULL;
@@ -215,12 +220,27 @@ int main() {
     const char * path = "scene.js";
     uint64_t last_mtime = mtime_us(path);
 
+#ifdef ENABLE_AUDIO
+    ALbyte audio_buffer[4410];
+    ALint audio_nsamples;
+    ALCdevice * device = alcCaptureOpenDevice(NULL, 44100, AL_FORMAT_MONO16, 1024);
+    if (!device) {
+        printf("alcCaptureOpenDevice: %s\n", alGetString(alGetError()));
+        return EXIT_FAILURE;
+    }
+    alcCaptureStart(device);
+#endif
+
     duk_context * ctx = duk_create_heap_default();
     if (!ctx) {
         err(EXIT_FAILURE, "duk_create_heap_default");
     }
 
     setup_environment(ctx);
+    duk_push_number(ctx, 0);
+    duk_put_global_string(ctx, "rms");
+    duk_push_number(ctx, 0);
+    duk_put_global_string(ctx, "amp");
 
     push_string_file_raw(ctx, path);
     duk_push_string(ctx, path);
@@ -266,6 +286,25 @@ int main() {
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts_begin);
     char preverror[1024] = "";
     for (;;) {
+        // retrieve microphone data
+#ifdef ENABLE_AUDIO
+        alcGetIntegerv(device, ALC_CAPTURE_SAMPLES, (ALCsizei)sizeof(ALint), &audio_nsamples);
+        if (audio_nsamples > sizeof(audio_buffer) / 2) {
+            audio_nsamples = sizeof(audio_buffer) / 2;
+        }
+
+        if (audio_nsamples > 1024) {
+            alcCaptureSamples(device, (ALCvoid *)audio_buffer, audio_nsamples);
+            int16_t * buf = (int16_t *)audio_buffer;
+            float rms = 0;
+            for (int i = 0; i < audio_nsamples; i++) {
+                float v = (float)buf[i] / (UINT16_MAX+1);
+                rms += v * v;
+            }
+            duk_push_number(ctx, rms / audio_nsamples);
+            duk_put_global_string(ctx, "amp");
+        }
+#endif
         // sending data
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts_curr);
         float elapsed = (ts_curr.tv_sec -ts_begin.tv_sec) +
@@ -316,4 +355,8 @@ int main() {
     }
 
     duk_destroy_heap(ctx);
+#ifdef ENABLE_AUDIO
+    alcCaptureStop(device);
+    alcCaptureCloseDevice(device);
+#endif
 }
