@@ -261,16 +261,21 @@ int main() {
     printf("nleds: %d\n", nleds);
 
     int sockfd;
-    e131_packet_t packet;
+    e131_packet_t packet1, packet2;
     e131_addr_t dest;
 
     if ((sockfd = e131_socket()) < 0) {
         err(EXIT_FAILURE, "e131_socket");
     }
 
-    e131_pkt_init(&packet, 1, 3 * nleds);
-    memcpy(&packet.frame.source_name, "dmxlive", 18);
-    if (e131_set_option(&packet, E131_OPT_PREVIEW, true) < 0) {
+    e131_pkt_init(&packet1, 1, 512);
+    e131_pkt_init(&packet2, 2, 512);
+    memcpy(&packet1.frame.source_name, "dmxlive", 8);
+    memcpy(&packet2.frame.source_name, "dmxlive", 8);
+    if (e131_set_option(&packet1, E131_OPT_PREVIEW, true) < 0) {
+        err(EXIT_FAILURE, "e131_set_option");
+    }
+    if (e131_set_option(&packet2, E131_OPT_PREVIEW, true) < 0) {
         err(EXIT_FAILURE, "e131_set_option");
     }
 
@@ -322,14 +327,27 @@ int main() {
                 duk_pop(ctx);
                 continue;
             }
-            packet.dmp.prop_val[1 + 3*pos + 0] = rgb.r;
-            packet.dmp.prop_val[1 + 3*pos + 1] = rgb.g;
-            packet.dmp.prop_val[1 + 3*pos + 2] = rgb.b;
+            if (pos <= 170)
+                packet1.dmp.prop_val[1 + 3*pos + 0] = rgb.r;
+            else
+                packet2.dmp.prop_val[1 + 3*(pos-171) + 0] = rgb.r;
+            if (pos <= 170)
+                packet1.dmp.prop_val[1 + 3*pos + 1] = rgb.g;
+            else
+                packet2.dmp.prop_val[1 + 3*(pos-171) + 1] = rgb.g;
+            if (pos <= 170)
+                packet1.dmp.prop_val[1 + 3*pos + 2] = rgb.b;
+            else
+                packet2.dmp.prop_val[1 + 3*(pos-171) + 2] = rgb.b;
         }
-        if (e131_send(sockfd, &packet, &dest) < 0) {
+        if (e131_send(sockfd, &packet1, &dest) < 0) {
             err(EXIT_FAILURE, "e131_send");
         }
-        packet.frame.seq_number++;
+        if (e131_send(sockfd, &packet2, &dest) < 0) {
+            err(EXIT_FAILURE, "e131_send");
+        }
+        packet1.frame.seq_number++;
+        packet2.frame.seq_number++;
         // dealing with file reloading
         uint64_t curr_mtime = mtime_us(path);
         if (curr_mtime > last_mtime) {
@@ -339,6 +357,7 @@ int main() {
                 printf("compilation failed: %s\n", duk_safe_to_string(ctx, -1));
             } else {
                 if (duk_pcall(ctx, 0) == DUK_EXEC_SUCCESS) {
+                    printf("reload\n");
                 } else {
                     printf("error: %s\n", duk_safe_to_string(ctx, -1));
                 }
