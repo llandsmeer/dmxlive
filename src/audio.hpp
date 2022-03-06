@@ -42,11 +42,11 @@ struct Audio {
                     vp = vp * lp + v * (1 - lp);
                     low += vp * vp;
                 }
-                float vol = sqrt(low) / nsamples;
-                big_lp = 0.2 * big_lp + 0.8*vol;
-                amax = amax * 0.999;
-                if (big_lp > amax) amax = big_lp;
+                last_volume = sqrt(low) / nsamples;
             }
+            big_lp = 0.2 * big_lp + 0.8*last_volume;
+            amax = amax * 0.999;
+            if (big_lp > amax) amax = big_lp;
         }
         float res = powf(big_lp / amax, 4);
         return res;

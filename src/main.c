@@ -143,6 +143,6 @@ int main() {
         packet1.frame.seq_number++;
         packet2.frame.seq_number++;
         script.recompile_if_changed();
-        usleep(5000);
+        usleep(10*1000);
     }
 }

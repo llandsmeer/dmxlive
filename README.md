@@ -100,17 +100,11 @@ function color(i, t) {
 Volume meter
 
 ```javascript
-v = 0
 function color(i, t) {
-    if (i == 0) {
-        v = max(amp, v * 0.99)
-    }
-    if (i > nleds*log(1e4*v)) return
-    if (i > nleds * 0.8)
-        return 'red'
-    if (i > nleds * 0.5)
-        return 'orange'
-    return 'green'
+    if (i > nleds * amp) return
+    if (i > nleds * 0.8) return 'red'
+    if (i > nleds * 0.5) return 'orange'
+                         return 'green'
 }
 ```
 
