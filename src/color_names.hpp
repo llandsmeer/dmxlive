@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdint.h>
 
 // from https://github.com/processing/p5.js/blob/v1.4.1/src/color/p5.Color.js#L14

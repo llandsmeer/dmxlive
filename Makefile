@@ -1,8 +1,10 @@
-build/dmxlive.audio: main.c build/duktape.o build/e131.o
-	g++ -Wall -Wextra -g main.c build/e131.o build/duktape.o -o dmxlive -lm -std=c++11 -DENABLE_AUDIO -lopenal
+all: dmxlive.noaudio dmxlive
 
-build/dmxlive.noaudio: main.c build/duktape.o build/e131.o
-	g++ -Wall -Wextra -g main.c build/e131.o build/duktape.o -o dmxlive -lm -std=c++11
+dmxlive: $(wildcard src/*) build/duktape.o build/e131.o
+	g++ -Wall -Wextra -g src/main.c build/e131.o build/duktape.o -o dmxlive -lm -std=c++11 -DENABLE_AUDIO -lopenal -I . -O2
+
+dmxlive.noaudio: $(wildcard src/*) build/duktape.o build/e131.o
+	g++ -Wall -Wextra -g src/main.c build/e131.o build/duktape.o -o dmxlive.noaudio -lm -std=c++11 -I . -O2
 
 build/duktape.o: duktape/duktape.c
 	mkdir -p build
