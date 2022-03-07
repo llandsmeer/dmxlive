@@ -68,6 +68,7 @@ struct rgb hsv2rgb(float hsv[3]) {
 
 #include "color_names.hpp"
 #include "jsscript.hpp"
+#include "dmx.hpp"
 
 #ifdef ENABLE_AUDIO
 #include "audio.hpp"
@@ -80,68 +81,22 @@ int main() {
     JSScript script("scene.js");
     printf("ip: %s\n", script.ip);
     printf("nleds: %d\n", script.nleds);
-    const char * ip = script.ip;
-    int nleds = script.nleds;
-
-    int sockfd;
-    e131_packet_t packet1, packet2;
-    e131_addr_t dest;
-
-    if ((sockfd = e131_socket()) < 0) {
-        err(EXIT_FAILURE, "e131_socket");
-    }
-
-    e131_pkt_init(&packet1, 1, 512);
-    e131_pkt_init(&packet2, 2, 512);
-    memcpy(&packet1.frame.source_name, "dmxlive", 8);
-    memcpy(&packet2.frame.source_name, "dmxlive", 8);
-    if (e131_set_option(&packet1, E131_OPT_PREVIEW, true) < 0) {
-        err(EXIT_FAILURE, "e131_set_option");
-    }
-    if (e131_set_option(&packet2, E131_OPT_PREVIEW, true) < 0) {
-        err(EXIT_FAILURE, "e131_set_option");
-    }
-
-    if (e131_unicast_dest(&dest, ip, E131_DEFAULT_PORT) < 0) {
-        err(EXIT_FAILURE, "e131_unicast_dest");
-    }
-
+    UnicastDMX dmx(script.ip, script.nleds, /* universe = */1);
     struct timespec ts_begin, ts_curr;
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts_begin);
     for (;;) {
-        // retrieve microphone data
 #ifdef ENABLE_AUDIO
         float v = audio.get_rms();
         script.set_amp(v);
 #endif
-
-        // sending data
         clock_gettime(CLOCK_MONOTONIC_RAW, &ts_curr);
         float elapsed = (ts_curr.tv_sec -ts_begin.tv_sec) +
                         (ts_curr.tv_nsec-ts_begin.tv_nsec) * 1e-9;
-        for (int pos = 0; pos < nleds; pos++) {
+        for (int pos = 0; pos < script.nleds; pos++) {
             rgb color = script.get_color(pos, elapsed);
-            if (pos <= 170)
-                packet1.dmp.prop_val[1 + 3*pos + 0] = color.r;
-            else
-                packet2.dmp.prop_val[1 + 3*(pos-171) + 0] = color.r;
-            if (pos <= 170)
-                packet1.dmp.prop_val[1 + 3*pos + 1] = color.g;
-            else
-                packet2.dmp.prop_val[1 + 3*(pos-171) + 1] = color.g;
-            if (pos <= 170)
-                packet1.dmp.prop_val[1 + 3*pos + 2] = color.b;
-            else
-                packet2.dmp.prop_val[1 + 3*(pos-171) + 2] = color.b;
+            dmx.set(pos, color);
         }
-        if (e131_send(sockfd, &packet1, &dest) < 0) {
-            err(EXIT_FAILURE, "e131_send");
-        }
-        if (e131_send(sockfd, &packet2, &dest) < 0) {
-            err(EXIT_FAILURE, "e131_send");
-        }
-        packet1.frame.seq_number++;
-        packet2.frame.seq_number++;
+        dmx.send();
         script.recompile_if_changed();
         usleep(10*1000);
     }

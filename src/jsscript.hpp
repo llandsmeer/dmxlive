@@ -59,7 +59,7 @@ struct JSScript {
 
         duk_get_global_string(ctx, "ip");
         const char * ip_raw = duk_safe_to_string(ctx, -1);
-        strncpy(ip, ip_raw, 256);
+        strncpy(ip, ip_raw, 255);
         ip[255] = 0;
         duk_pop(ctx);
 
