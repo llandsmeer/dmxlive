@@ -20,3 +20,4 @@ RunRelease: build/dmxlive.audio
 clean:
 	rm build -fr
 	rm dmxlive
+	rm dmxlive.noaudio

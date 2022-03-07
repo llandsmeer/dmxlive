@@ -127,3 +127,4 @@ function color(i, t) {
  - libe131
  - duktape
  - named colors from [p5js](https://github.com/processing/p5.js/blob/v1.4.1/src/color/p5.Color.js#L14)
+ - @max9901

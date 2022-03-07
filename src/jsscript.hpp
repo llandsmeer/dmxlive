@@ -2,6 +2,9 @@
 
 #include <string>
 #include <stdint.h>
+#include <sys/stat.h> // stat()
+#include <err.h> // err()
+#include <duktape/duktape.h>
 
 duk_ret_t js_hsv2rgb(duk_context * ctx) {
     int nargs = duk_get_top(ctx);

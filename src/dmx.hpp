@@ -1,5 +1,7 @@
 #include <vector>
 #include <string.h>
+#include <err.h> // err()
+#include <libe131/e131.h>
 
 struct UnicastDMX {
     std::vector<e131_packet_t> packets;
