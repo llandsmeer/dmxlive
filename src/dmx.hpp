@@ -7,8 +7,10 @@ struct UnicastDMX {
     std::vector<e131_packet_t> packets;
     e131_addr_t dest;
     int sockfd;
+    int _nleds = 0;
     const char * source_name = "dmxlive";
     UnicastDMX(const char * ip, int nleds, int universe = 1) {
+        _nleds = nleds;
         // init socket
         if ((sockfd = e131_socket()) < 0) {
             err(EXIT_FAILURE, "e131_socket");

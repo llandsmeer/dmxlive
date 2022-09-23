@@ -25,21 +25,44 @@ function color(i, t) {
 
 The `color` function can return, any javascript value, and the program tries to make it into a color.
 
-## microphone input
+## external input
 
-Optionally enabled with the `ENABLE_AUDIO` preprocessor flag, which is set by default.
-Depends on the OpenAL library.
+Microphone support is optionally enabled with the `ENABLE_AUDIO` preprocessor flag, which is set by default. This depends on the OpenAL library.
+The `ENABLE_MIDI` flag enables midi support using the `RtMdidi` library.
 
 ```
 sudo apt install libopenal-dev
+sudo apt install librtmidi-dev
 ```
 
-If it is not available, you can use `make build/dmxlive.noaudio`
-to build without microphone input support.
+If these are not available, you can use `make build/dmxlive.noaudio`
+to build without input support.
 
 For the moment, RMS microphone input is available as the global variable `amp`
 in `scene.js`. True RMS is a not a good measure of loudness, but I haven't gotten around
 to implementing something better.
+
+Midi keypresses are available in global variables as:
+
+```
+# For button {keynum}, pressed at velocity {velocity} or 0 at key off
+# Channel 0
+k{keynum} = {velocity}
+
+# Same, for channel n
+n{n}k{keynum} = {velocity}
+
+# For knob {controlnum}, at value {value}
+# Channel 0
+v{controlnum} = {value}
+
+# Same, for channel n
+n{n}v{controlnum} = {value}
+
+# Examples
+k44 = 127 # channel 0, key 44, pressed at full velocity
+n1v1 = 64 # channel 1, knob 1, at 50%
+```
 
 ## some examples
 
@@ -122,9 +145,19 @@ function color(i, t) {
 }
 ```
 
+Midi input
+
+```javascript
+function color(i, t) {
+    return [k44, v1, v2]
+}
+```
+
 ## would not have been possible without:
 
  - libe131
  - duktape
  - named colors from [p5js](https://github.com/processing/p5.js/blob/v1.4.1/src/color/p5.Color.js#L14)
+ - libopenal
+ - librtmidi
  - @max9901

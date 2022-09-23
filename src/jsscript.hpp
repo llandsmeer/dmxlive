@@ -26,7 +26,13 @@ duk_ret_t js_hsv2rgb(duk_context * ctx) {
 struct JSScript {
     duk_context * ctx;
     char ip[256];
-    int nleds;
+    char ip2[256];
+    char ip3[256];
+    char ip4[256];
+    int nleds = 0;
+    int nleds2 = 0;
+    int nleds3 = 0;
+    int nleds4 = 0;
     std::string path;
     uint64_t last_mtime;
     std::string preverror = "";
@@ -66,9 +72,43 @@ struct JSScript {
         ip[255] = 0;
         duk_pop(ctx);
 
+        duk_get_global_string(ctx, "ip2");
+        ip_raw = duk_safe_to_string(ctx, -1);
+        strncpy(ip2, ip_raw, 255);
+        ip2[255] = 0;
+        duk_pop(ctx);
+
+        duk_get_global_string(ctx, "ip3");
+        ip_raw = duk_safe_to_string(ctx, -1);
+        strncpy(ip3, ip_raw, 255);
+        ip3[255] = 0;
+        duk_pop(ctx);
+
+        duk_get_global_string(ctx, "ip4");
+        ip_raw = duk_safe_to_string(ctx, -1);
+        strncpy(ip4, ip_raw, 255);
+        ip4[255] = 0;
+        duk_pop(ctx);
+
         duk_get_global_string(ctx, "nleds");
         nleds = duk_get_int(ctx, -1);
         duk_pop(ctx);
+
+        duk_get_global_string(ctx, "nleds2");
+        nleds2 = duk_get_int(ctx, -1);
+        duk_pop(ctx);
+
+        duk_get_global_string(ctx, "nleds3");
+        nleds3 = duk_get_int(ctx, -1);
+        duk_pop(ctx);
+
+        duk_get_global_string(ctx, "nleds4");
+        nleds4 = duk_get_int(ctx, -1);
+        duk_pop(ctx);
+
+        if (nleds2 == 0) nleds2 = nleds;
+        if (nleds3 == 0) nleds3 = nleds;
+        if (nleds4 == 0) nleds4 = nleds;
     }
 
     void set_amp(float amp) {
@@ -76,12 +116,18 @@ struct JSScript {
         duk_put_global_string(ctx, "amp");
     }
 
-    rgb get_color(int led_idx, float time) {
+    void set_number(std::string & name, int value) {
+        duk_push_number(ctx, value);
+        duk_put_global_string(ctx, name.c_str());
+    }
+
+    rgb get_color(int led_idx, float time, int dmx_id) {
         duk_get_global_string(ctx, "color");
         duk_push_int(ctx, led_idx);
         duk_push_number(ctx, time);
+        duk_push_number(ctx, dmx_id);
         struct rgb color;
-        if (duk_pcall(ctx, 2) == DUK_EXEC_SUCCESS) {
+        if (duk_pcall(ctx, 3) == DUK_EXEC_SUCCESS) {
             color = get_rgb_color();
             duk_pop(ctx);
         } else {
