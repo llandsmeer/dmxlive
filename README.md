@@ -15,8 +15,10 @@ Whevener you update `scene.js`, dmxlive will
 reload the file allowing you to perform live coding.
 
 ```javascript
-ip = "192.168.1.92"
-nleds = 150
+// ip: nleds
+wled_config = {
+    "192.168.1.92": 150,
+}
 
 function color(i, t) {
     return i % 2 == 0 ? 0 : 255
