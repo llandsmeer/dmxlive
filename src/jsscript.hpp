@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include <stdint.h>
 #include <sys/stat.h> // stat()
@@ -25,14 +26,8 @@ duk_ret_t js_hsv2rgb(duk_context * ctx) {
 
 struct JSScript {
     duk_context * ctx;
-    char ip[256];
-    char ip2[256];
-    char ip3[256];
-    char ip4[256];
-    int nleds = 0;
-    int nleds2 = 0;
-    int nleds3 = 0;
-    int nleds4 = 0;
+    std::vector<std::string> vec_ip;
+    std::vector<int> vec_nleds;
     std::string path;
     uint64_t last_mtime;
     std::string preverror = "";
@@ -66,49 +61,18 @@ struct JSScript {
         }
         duk_pop(ctx);
 
-        duk_get_global_string(ctx, "ip");
-        const char * ip_raw = duk_safe_to_string(ctx, -1);
-        strncpy(ip, ip_raw, 255);
-        ip[255] = 0;
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "ip2");
-        ip_raw = duk_safe_to_string(ctx, -1);
-        strncpy(ip2, ip_raw, 255);
-        ip2[255] = 0;
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "ip3");
-        ip_raw = duk_safe_to_string(ctx, -1);
-        strncpy(ip3, ip_raw, 255);
-        ip3[255] = 0;
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "ip4");
-        ip_raw = duk_safe_to_string(ctx, -1);
-        strncpy(ip4, ip_raw, 255);
-        ip4[255] = 0;
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "nleds");
-        nleds = duk_get_int(ctx, -1);
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "nleds2");
-        nleds2 = duk_get_int(ctx, -1);
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "nleds3");
-        nleds3 = duk_get_int(ctx, -1);
-        duk_pop(ctx);
-
-        duk_get_global_string(ctx, "nleds4");
-        nleds4 = duk_get_int(ctx, -1);
-        duk_pop(ctx);
-
-        if (nleds2 == 0) nleds2 = nleds;
-        if (nleds3 == 0) nleds3 = nleds;
-        if (nleds4 == 0) nleds4 = nleds;
+        duk_get_global_string(ctx, "wled_config");
+        duk_enum(ctx, -1, DUK_ENUM_OWN_PROPERTIES_ONLY);
+        while (duk_next(ctx, -1, 1) != 0) {
+            const char * ip_raw = duk_safe_to_string(ctx, -2);
+            int nleds = duk_get_int(ctx, -1);
+            std::string ip(ip_raw);
+            vec_ip.push_back(ip);
+            vec_nleds.push_back(nleds);
+            duk_pop_2(ctx); // kv pair
+        }
+        duk_pop(ctx); // enum
+        duk_pop(ctx); // wled_config
     }
 
     void set_amp(float amp) {

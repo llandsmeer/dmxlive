@@ -24,26 +24,15 @@ int main() {
     Midi midi;
 #endif
     JSScript script("scene.js");
-    printf("ip: '%s\n", script.ip);
-    printf("ip2: '%s'\n", script.ip2);
-    printf("ip3: '%s'\n", script.ip3);
-    printf("ip4: '%s'\n", script.ip4);
-    printf("nleds: %d\n", script.nleds);
-    printf("nleds2: %d\n", script.nleds2);
-    printf("nleds3: %d\n", script.nleds3);
-    printf("nleds4: %d\n", script.nleds4);
     std::vector<UnicastDMX> dmx;
-    dmx.emplace_back(script.ip, script.nleds, /* universe */1);
-    if (strcmp(script.ip2, "undefined") != 0) {
-        dmx.emplace_back(script.ip2, script.nleds2, /* universe */1);
+    for (long unsigned i = 0; i < script.vec_ip.size(); i++) {
+        const char * ip = script.vec_ip.at(i).c_str();
+        int nleds = script.vec_nleds.at(i);
+        printf("device [%lu] ip: %s\n", i, ip);
+        printf("device [%lu] nleds: %d\n", i, nleds);
+        printf("device [%lu] universe: 1\n", i);
+        dmx.emplace_back(ip, nleds, /* universe */ 1);
     }
-    if (strcmp(script.ip3, "undefined") != 0) {
-        dmx.emplace_back(script.ip3, script.nleds3, /* universe */1);
-    }
-    if (strcmp(script.ip4, "undefined") != 0) {
-        dmx.emplace_back(script.ip4, script.nleds4, /* universe */1);
-    }
-    //UnicastDMX dmx(script.ip, script.nleds, /* universe = */1);
     struct timespec ts_begin, ts_curr;
     clock_gettime(CLOCK_MONOTONIC_RAW, &ts_begin);
     for (;;) {
